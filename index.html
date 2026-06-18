@@ -100,23 +100,27 @@
       + inputCell(name, first) + '</tr>';
   }
   function answerFormHTML(){
-    var empRows = rankRow('emp','1위','🥇',true)+rankRow('emp','2위','🥈',false)+rankRow('emp','3위','🥉',false);
+    var empRows = rankRow('emp','1위','',true)+rankRow('emp','2위','',false)+rankRow('emp','3위','',false);
     var regRows = rankRow('region','1위','',true)+rankRow('region','2위','',false)+rankRow('region','3위','',false)+rankRow('region','4위','',false)+rankRow('region','5위','',false);
     return ''
-     + '<form class="section" id="arenaForm" onsubmit="return false;" aria-labelledby="answerHead">'
-     + '<h2 id="answerHead">정답 제출</h2>'
-     + '<div class="nick-field">'
-     +   '<label for="nick">참가자 이름 / 닉네임</label>'
-     +   '<p class="note">리더보드에 이 이름으로 표시돼요. 사번 로그인(SSO) 없이 자유롭게 적으면 됩니다.</p>'
-     +   '<input type="text" id="nick" maxlength="20" autocomplete="off" placeholder="예: 김아무개 / 데이터덕후">'
+     + '<form id="arenaForm" onsubmit="return false;" aria-labelledby="answerHead">'
+     + '<div class="mission-brief"><strong>작성 지시</strong>녹취록과 매출 데이터를 바탕으로 2월 우수사원 3명과 지역별 실적 상위 5개 지역을 순위대로 기입하세요. 사원은 이름 또는 사번 중 하나만 적으면 됩니다.</div>'
+     + '<div class="section report-doc">'
+     +   '<div class="report-head">'
+     +     '<div class="report-org">AB텔레콤 · 영업본부</div>'
+     +     '<h2 id="answerHead" class="report-title">2월 영업실적 보고</h2>'
+     +     '<div class="report-meta">'
+     +       '<span class="report-author">작성자 <input type="text" id="nick" maxlength="20" autocomplete="off" placeholder="이름, 혹은 닉네임을 써주세요"></span>'
+     +       '<span class="report-date">보고일 : 2026. 3. 25.</span>'
+     +     '</div>'
+     +   '</div>'
+     +   '<div class="report-item"><span class="report-no">1.</span> 이달의 우수사원</div>'
+     +   '<table class="ans report-table"><tbody>'+empRows+'</tbody></table>'
+     +   '<div class="report-item"><span class="report-no">2.</span> 지역별 실적 <span class="report-item-sub">(상위 5개 지역)</span></div>'
+     +   '<table class="ans report-table"><tbody>'+regRows+'</tbody></table>'
      + '</div>'
-     + '<p class="ans-intro">녹취록과 매출 데이터를 바탕으로 <strong>이달의 사원 상위 3명</strong>과 <strong>지역별 실적 상위 5개 지역</strong>을 <strong>순위대로</strong> 채워 주세요. 금액은 적지 않아도 되고, 사원은 <strong>이름 또는 사번</strong> 중 하나만 적으면 됩니다.</p>'
-     + '<div class="ans-table-title">이달의 사원</div>'
-     + '<table class="ans"><thead><tr><th style="width:62px;">순위</th><th>이름 또는 사번</th></tr></thead><tbody>'+empRows+'</tbody></table>'
-     + '<div class="ans-table-title">지역별 실적</div>'
-     + '<table class="ans"><thead><tr><th style="width:62px;">순위</th><th>지역명</th></tr></thead><tbody>'+regRows+'</tbody></table>'
      + '<div class="submit-row"><div class="submit-note">✏️ 입력은 자동 저장돼요. 새로고침해도 복원됩니다.</div>'
-     + '<button type="button" id="submitBtn" class="submit-btn">제출하기</button></div>'
+     + '<button type="button" id="submitBtn" class="submit-btn">보고서 제출</button></div>'
      + '</form>';
   }
 
