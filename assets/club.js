@@ -88,7 +88,7 @@ window.scoreValues = function(values){
  *   meta: { status: 'draft'|'open'|'closed' }
  *   submissions[]: { id, nickname, score, total, breakdown:[bool x16], submittedAt(ms) }
  *     ※ 정답 평문/원본답안은 저장하지 않는다(정답 누출 방지).
- * "내 제출"(1회 제출 가드)은 백엔드와 무관하게 localStorage에 기록.
+ * "내 마지막 제출"(리더보드 '나' 표시용)은 백엔드와 무관하게 localStorage에 기록.
  * ========================================================================= */
 window.Store = (function(){
   var NS = window.CLUB.roundKey;
