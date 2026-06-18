@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>아레나 · EBB AX CLUB #1 첫 출근</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<nav class="top-nav" aria-label="주요 메뉴">
+  <a href="index.html" aria-current="page">아레나</a>
+  <a href="leaderboard.html">리더보드</a>
+</nav>
+
+<div class="wrap">
+  <nav class="crumbs" aria-label="위치">
+    <span>EBB AX CLUB</span><span class="sep">›</span><span aria-current="page">아레나 · 1회차</span>
+  </nav>
+
+  <header class="hero">
+    <div class="eyebrow" id="heroEyebrow"><span class="live-dot" aria-hidden="true"></span><span id="heroStatus">ARENA #1</span></div>
+    <h1>첫 출근</h1>
+    <div class="sub">영업본부 전입 첫날, 인계 없이 30분 안에 보고서를 완성해야 해요.</div>
+    <div class="meta-chips">
+      <span class="chip">30분 제한</span><span class="chip">데이터해석</span><span class="chip">GPT 활용</span>
+    </div>
+  </header>
+
+  <div role="status" aria-live="polite" class="sr-only" id="srStatus"></div>
+  <main id="app"></main>
+
+  <div class="foot">
+    EBB AX CLUB · 1회차 「첫 출근」 · 아레나<br>
+    <span id="footBackend"></span>
+  </div>
+</div>
+
+<!-- 제출 확인 모달 -->
+<div class="modal-backdrop" id="confirmModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <div class="modal-panel">
+    <h3 id="modalTitle" class="modal-title">제출할까요?</h3>
+    <p class="modal-desc">제출하면 답안이 <strong>봉인</strong>되고 수정할 수 없어요. 충분히 검토하셨다면 제출하세요. 제출 후 리더보드로 이동합니다.</p>
+    <div class="modal-warn" id="modalWarn" role="alert"><span id="warnNote"></span></div>
+    <div class="modal-actions">
+      <button type="button" class="modal-btn secondary" id="cancelBtn">취소</button>
+      <button type="button" class="modal-btn primary" id="okBtn">제출</button>
+    </div>
+  </div>
+</div>
+
+<div class="draft-toast" id="draftToast" role="status" aria-live="polite"></div>
+
+<script src="firebase-config.js"></script>
+<script src="assets/club.js"></script>
+<script>
+(function(){
+  var app = document.getElementById('app');
+  var DKEY = CLUB.roundKey + '_draft';
+
+  function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+
+  var storyHTML = ''
+   + '<section class="section story" aria-labelledby="storyHead">'
+   + '<h2 id="storyHead">스토리</h2>'
+   + '<p class="disclaimer">(문제 내 회사명과 이름은 실제와 무관합니다)</p>'
+   + '<p class="scene-time">2026년 3월 25일 수요일, 오전 9시.</p>'
+   + '<p>당신은 오늘 AB텔레콤 영업본부 영업기획파트로 전입을 왔습니다.</p>'
+   + '<p>인사팀에서 출입증을 받고 안내 받은 자리에 앉았습니다. 파티션 하나로 구분된 외딴 자리네요. 옆자리는 없습니다. 이 업무는 혼자 했던 모양입니다.</p>'
+   + '<p class="muted">책상에는 포스트잇 한 장이 붙어있습니다.</p>'
+   + '<div class="postit">『사정이 있어 인수인계를 못 해드렸네요. 필요하면 전화주세요 010-XXXX-XXXX — 김전임』</div>'
+   + '<p class="muted">노트북을 펴고 세팅하는 중에, 누군가 뒤에서 말을 겁니다.</p>'
+   + '<div class="dialog-group from-other"><div class="dialog-tag">영업본부장</div><div class="bubble">아, 김전임 후임이지? 반가워. 미안한데 10시에 본부 먼슬리 있는거 알지? 이달의 사원이랑 지역별 실적 좀 정리해줄 수 있어?</div></div>'
+   + '<div class="dialog-group from-me"><div class="dialog-tag">나</div><div class="bubble">네? 오늘 10시인가요?</div></div>'
+   + '<div class="dialog-group from-other"><div class="dialog-tag">영업본부장</div><div class="bubble">어, 시간이 없긴 한데 좀 부탁해. 모르는 건 전임이한테 전화해서 물어봐.</div></div>'
+   + '<p style="margin-top:22px;">포스트잇의 번호를 누릅니다. <em>(별첨 녹취록을 확인하세요.)</em></p>'
+   + '<div class="clock-box">전화를 끊고 시계를 봅니다. <strong>9시 30분. 30분 남았습니다.</strong></div>'
+   + '<div class="story-rules"><p>⏱ 제한시간: 30분</p><p>🛠 사용 가능 도구: 제한 없음 (AI 챗봇, 코드 실행, 엑셀, 웹 검색 등 자유)</p></div>'
+   + '</section>';
+
+  var attachHTML = ''
+   + '<section class="section" aria-labelledby="attachHead">'
+   + '<h2 id="attachHead">별첨 자료</h2>'
+   + '<ul class="attach-list">'
+   + '<li><div class="meta"><div class="name">김전임과의 통화 녹취록</div><div class="desc">전임자와의 전화 통화 음성메모 전문</div></div><a class="dl" href="files/recording.txt" download>다운로드</a></li>'
+   + '<li><div class="meta"><div class="name">매출 Raw Data</div><div class="desc">영업본부 매출 원본 데이터 (작년 1월 ~ 올해 3월)</div></div><a class="dl" href="files/sales_raw.csv" download>다운로드</a></li>'
+   + '</ul></section>';
+
+  function inputCell(f, withPlaceholder){
+    var ph = withPlaceholder ? (f.group==='emp' ? '예: 홍길동 또는 EMP1000' : '예: 서울') : '';
+    var inner = '<input type="text" data-qid="'+f.qid+'" data-kind="'+f.kind+'" autocomplete="off"'
+      + (ph ? ' placeholder="'+ph+'"' : '') + '><span class="mark"></span>';
+    return '<td class="cell">'+inner+'</td>';
+  }
+  function rankRow(group, rank, medal, first){
+    var name = QFIELDS.filter(function(f){return f.group===group && f.rank===rank && f.col==='name';})[0];
+    return '<tr><td class="rank">'+(medal?'<span class="medal">'+medal+'</span> ':'')+rank+'</td>'
+      + inputCell(name, first) + '</tr>';
+  }
+  function answerFormHTML(){
+    var empRows = rankRow('emp','1위','🥇',true)+rankRow('emp','2위','🥈',false)+rankRow('emp','3위','🥉',false);
+    var regRows = rankRow('region','1위','',true)+rankRow('region','2위','',false)+rankRow('region','3위','',false)+rankRow('region','4위','',false)+rankRow('region','5위','',false);
+    return ''
+     + '<form class="section" id="arenaForm" onsubmit="return false;" aria-labelledby="answerHead">'
+     + '<h2 id="answerHead">정답 제출</h2>'
+     + '<div class="nick-field">'
+     +   '<label for="nick">참가자 이름 / 닉네임</label>'
+     +   '<p class="note">리더보드에 이 이름으로 표시돼요. 사번 로그인(SSO) 없이 자유롭게 적으면 됩니다.</p>'
+     +   '<input type="text" id="nick" maxlength="20" autocomplete="off" placeholder="예: 김아무개 / 데이터덕후">'
+     + '</div>'
+     + '<p class="ans-intro">녹취록과 매출 데이터를 바탕으로 <strong>이달의 사원 상위 3명</strong>과 <strong>지역별 실적 상위 5개 지역</strong>을 <strong>순위대로</strong> 채워 주세요. 금액은 적지 않아도 되고, 사원은 <strong>이름 또는 사번</strong> 중 하나만 적으면 됩니다.</p>'
+     + '<div class="ans-table-title">이달의 사원</div>'
+     + '<table class="ans"><thead><tr><th style="width:62px;">순위</th><th>이름 또는 사번</th></tr></thead><tbody>'+empRows+'</tbody></table>'
+     + '<div class="ans-table-title">지역별 실적</div>'
+     + '<table class="ans"><thead><tr><th style="width:62px;">순위</th><th>지역명</th></tr></thead><tbody>'+regRows+'</tbody></table>'
+     + '<div class="submit-row"><div class="submit-note">✏️ 입력은 자동 저장돼요. 새로고침해도 복원됩니다.</div>'
+     + '<button type="button" id="submitBtn" class="submit-btn">제출하기</button></div>'
+     + '</form>';
+  }
+
+  function receiptHTML(mine, statusClosed){
+    var rows = '';
+    QFIELDS.forEach(function(f, i){
+      var ok = mine.breakdown[i];
+      rows += '<div class="receipt-row '+(ok?'correct':'wrong')+'"><span class="r-label">'+esc(f.label)+'</span><span class="r-mark">'+(ok?'O':'X')+'</span></div>';
+    });
+    return '<div class="receipt">'
+     + '<div class="receipt-header"><div class="receipt-eyebrow">'+esc(mine.nickname)+' 님의 기록</div>'
+     + '<div class="receipt-score">'+mine.score+'<span class="total">/'+mine.total+'</span></div>'
+     + (mine.score===mine.total?'<div class="receipt-perfect">★ PERFECT</div>':'')
+     + '<div class="receipt-sub">제출이 봉인되었어요. 리더보드에서 순위를 확인하세요.</div></div>'
+     + '<div class="receipt-rows">'+rows+'</div>'
+     + '<div class="center-actions"><a class="btn-link" href="leaderboard.html">리더보드 보기 →</a></div>'
+     + '</div>';
+  }
+
+  // ---------- toast ----------
+  var toast=document.getElementById('draftToast'), toastTimer=null;
+  function showToast(t){ toast.textContent=t; toast.classList.add('show'); clearTimeout(toastTimer); toastTimer=setTimeout(function(){toast.classList.remove('show');},1700); }
+
+  // ---------- render ----------
+  function setHero(status){
+    var ey=document.getElementById('heroEyebrow'), st=document.getElementById('heroStatus');
+    ey.className='eyebrow'+(status==='open'?'':' '+status);
+    st.textContent = status==='open' ? 'LIVE · ARENA #1' : status==='closed' ? 'ARENA #1 · 결과 공개' : 'ARENA #1 · 오픈 대기';
+  }
+  function setSR(status){
+    var t = status==='open'?'아레나 진행 중입니다. 풀이를 시작하세요.':status==='closed'?'아레나가 마감되었습니다.':'아레나는 아직 오픈 전입니다.';
+    setTimeout(function(){ document.getElementById('srStatus').textContent=t; },300);
+  }
+
+  // 단회차 정적 아레나 — 상태 게이트(오픈 전/진행 중/마감) 없이 항상 열려 있음
+  setHero('open'); setSR('open');
+  var mine = Store.getMine();
+  var html = storyHTML + attachHTML;
+  if (mine){
+    html += receiptHTML(mine, false);
+    app.innerHTML = html;
+  } else {
+    html += answerFormHTML();
+    app.innerHTML = html;
+    wireForm();
+  }
+
+  function wireForm(){
+    var form=document.getElementById('arenaForm');
+    var nick=document.getElementById('nick');
+    var inputs=Array.prototype.slice.call(form.querySelectorAll('input[data-qid]'));
+
+    // restore draft
+    try{
+      var saved=JSON.parse(localStorage.getItem(DKEY)||'{}');
+      if(saved.nick) nick.value=saved.nick;
+      var n=0; inputs.forEach(function(el){ if(saved.values && saved.values[el.dataset.qid]){ el.value=saved.values[el.dataset.qid]; n++; } });
+      if(n>0 || saved.nick) showToast('입력을 복원했어요'+(n>0?' ('+n+'개)':''));
+    }catch(e){}
+    var saveTimer=null;
+    function save(){ var o={nick:nick.value, values:{}}; inputs.forEach(function(el){ o.values[el.dataset.qid]=el.value; }); try{ localStorage.setItem(DKEY, JSON.stringify(o)); }catch(e){} }
+    form.addEventListener('input', function(){ clearTimeout(saveTimer); saveTimer=setTimeout(save,400); });
+
+    // modal
+    var modal=document.getElementById('confirmModal'), warn=document.getElementById('modalWarn'), warnNote=document.getElementById('warnNote');
+    var cancelBtn=document.getElementById('cancelBtn'), okBtn=document.getElementById('okBtn'), submitting=false, lastFocus=null;
+    function openModal(){
+      if(!nick.value.trim()){
+        nick.setAttribute('aria-invalid','true'); nick.focus(); nick.scrollIntoView({behavior:'smooth',block:'center'});
+        showToast('이름 또는 닉네임을 먼저 입력해 주세요'); return;
+      }
+      nick.removeAttribute('aria-invalid');
+      var empty=0; inputs.forEach(function(el){ if(!(el.value||'').trim()) empty++; });
+      if(empty>0){ warnNote.textContent='⚠ 빈 칸이 '+empty+'개 있어요. 빈 칸은 오답 처리됩니다.'; warn.classList.add('show'); }
+      else warn.classList.remove('show');
+      lastFocus=document.activeElement; modal.classList.add('show'); setTimeout(function(){okBtn.focus();},10);
+      document.addEventListener('keydown', onKey);
+    }
+    function closeModal(){ modal.classList.remove('show'); document.removeEventListener('keydown', onKey); if(lastFocus) lastFocus.focus(); }
+    function onKey(e){
+      if(e.key==='Escape'){ if(!submitting) closeModal(); return; }
+      if(e.key==='Tab'){ var f=[cancelBtn,okBtn], i=f.indexOf(document.activeElement);
+        if(e.shiftKey){ if(i<=0){ e.preventDefault(); f[f.length-1].focus(); } } else { if(i===f.length-1){ e.preventDefault(); f[0].focus(); } } }
+    }
+    document.getElementById('submitBtn').addEventListener('click', openModal);
+    cancelBtn.addEventListener('click', function(){ if(!submitting) closeModal(); });
+    modal.addEventListener('click', function(e){ if(e.target===modal && !submitting) closeModal(); });
+
+    okBtn.addEventListener('click', function(){
+      if(submitting) return; submitting=true; okBtn.disabled=true; okBtn.textContent='제출 중…'; cancelBtn.disabled=true;
+      var values={}; inputs.forEach(function(el){ values[el.dataset.qid]=el.value; });
+      var res=scoreValues(values);
+      var rec={ nickname:nick.value.trim().slice(0,20), score:res.correct, total:res.total,
+                breakdown:res.breakdown.map(function(b){return b.ok;}), submittedAt:Date.now() };
+      Promise.resolve(Store.add(rec)).then(function(id){
+        Store.setMine(Object.assign({id:id}, rec));
+        try{ localStorage.removeItem(DKEY); }catch(e){}
+        window.location.href='leaderboard.html';
+      }).catch(function(err){
+        submitting=false; okBtn.disabled=false; okBtn.textContent='제출'; cancelBtn.disabled=false;
+        warnNote.textContent='제출 중 오류가 났어요. 잠시 후 다시 시도해 주세요.'; warn.classList.add('show');
+      });
+    });
+  }
+
+  // backend banner (footer)
+  document.getElementById('footBackend').textContent =
+    (Store.mode==='firebase') ? '공유 모드 (Firebase)' : '데모 모드 (이 브라우저에만 저장 · 공유 리더보드 아님)';
+})();
+</script>
+</body>
+</html>

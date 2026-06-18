@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>운영자 콘솔 · EBB AX CLUB #1</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="wrap">
+  <nav class="crumbs" aria-label="위치">
+    <span>EBB AX CLUB</span><span class="sep">›</span><span aria-current="page">운영자 콘솔 · 1회차</span>
+  </nav>
+
+  <!-- 패스 게이트 -->
+  <div id="gate" class="section admin-gate">
+    <h2 style="margin-top:0;">운영자 콘솔</h2>
+    <p class="submit-note" style="margin-bottom:14px;">운영자 패스프레이즈를 입력하세요.</p>
+    <input type="password" id="passInput" placeholder="패스프레이즈" autocomplete="off">
+    <div class="err" id="passErr"></div>
+    <button type="button" class="submit-btn" id="enterBtn" style="width:100%;">입장</button>
+  </div>
+
+  <!-- 콘솔 -->
+  <div id="console" style="display:none;">
+    <header class="hero">
+      <div class="eyebrow"><span class="live-dot" aria-hidden="true"></span>OPERATOR CONSOLE · ARENA #1</div>
+      <h1>운영자 콘솔</h1>
+      <div class="sub">아레나 1회차 「첫 출근」 — 열기/닫기와 제출 현황을 관리합니다.</div>
+    </header>
+
+    <div class="backend-banner" id="backendBanner"></div>
+
+    <section class="section">
+      <h2>제출 현황</h2>
+      <div class="admin-stats">
+        <div class="stat"><div class="v" id="statCount">0</div><div class="l">총 제출</div></div>
+        <div class="stat"><div class="v" id="statAvg">0</div><div class="l">평균 점수 / 8</div></div>
+        <div class="stat"><div class="v" id="statPerfect">0</div><div class="l">만점자</div></div>
+      </div>
+      <div class="toolbar">
+        <a class="btn-link ghost" href="leaderboard.html" target="_blank" style="padding:9px 16px; font-size:13px;">리더보드 열기 ↗</a>
+        <button type="button" class="ghost-btn" id="csvBtn" style="padding:9px 16px; font-size:13px;">CSV 내보내기</button>
+        <button type="button" class="ghost-btn" id="refreshBtn" style="padding:9px 16px; font-size:13px;">새로고침</button>
+        <button type="button" class="danger-btn" id="clearBtn" style="margin-left:auto;">전체 초기화</button>
+      </div>
+      <div id="admTable"><div class="lb-empty">불러오는 중…</div></div>
+    </section>
+
+    <div class="foot">EBB AX CLUB · 1회차 운영자 콘솔 · <span id="footBackend"></span></div>
+  </div>
+</div>
+
+<div class="draft-toast" id="draftToast" role="status" aria-live="polite"></div>
+
+<script src="firebase-config.js"></script>
+<script src="assets/club.js"></script>
+<script>
+(function(){
+  var SESS = CLUB.roundKey + '_admin_ok';
+  function esc(s){ return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+  var toast=document.getElementById('draftToast'), tt=null;
+  function showToast(t){ toast.textContent=t; toast.classList.add('show'); clearTimeout(tt); tt=setTimeout(function(){toast.classList.remove('show');},1700); }
+
+  // ---------- gate ----------
+  var gate=document.getElementById('gate'), cons=document.getElementById('console');
+  function enter(){ gate.style.display='none'; cons.style.display='block'; boot(); }
+  function tryPass(){
+    var v=document.getElementById('passInput').value;
+    if(hsh(v)===CLUB.adminPassHash){ try{ sessionStorage.setItem(SESS,'1'); }catch(e){} enter(); }
+    else { document.getElementById('passErr').textContent='패스프레이즈가 올바르지 않아요.'; }
+  }
+  document.getElementById('enterBtn').addEventListener('click', tryPass);
+  document.getElementById('passInput').addEventListener('keydown', function(e){ if(e.key==='Enter') tryPass(); });
+  try{ if(sessionStorage.getItem(SESS)==='1') enter(); }catch(e){}
+
+  // ---------- console ----------
+  var cache=[];
+  function boot(){
+    document.getElementById('passInput').value='';
+    var fb = (Store.mode==='firebase');
+    var banner=document.getElementById('backendBanner');
+    banner.className='backend-banner '+(fb?'firebase':'local');
+    banner.innerHTML = fb
+      ? '✅ <strong>공유 모드 (Firebase)</strong> — 모든 참가자의 제출이 실시간으로 모입니다.'
+      : '⚠️ <strong>데모 모드</strong> — 지금은 이 브라우저 안에서만 데이터가 공유돼요. 여러 사람이 함께 쓰려면 Firebase 설정이 필요합니다(README 참고).';
+    document.getElementById('footBackend').textContent = fb?'공유 모드 (Firebase)':'데모 모드';
+
+    document.getElementById('refreshBtn').addEventListener('click', refresh);
+    document.getElementById('csvBtn').addEventListener('click', exportCsv);
+    document.getElementById('clearBtn').addEventListener('click', function(){
+      if(confirm('정말 모든 제출을 삭제할까요? 되돌릴 수 없습니다.')){
+        Promise.resolve(Store.clearAll()).then(function(){ showToast('전체 초기화 완료'); });
+      }
+    });
+
+    // live subscribe
+    function admErr(){ document.getElementById('admTable').innerHTML='<div class="lb-empty">공유 서버에 연결하지 못했어요. 네트워크를 확인하고 새로고침해 주세요.</div>'; }
+    Store.subscribe(function(subs){ cache=subs||[]; renderTable(); renderStats(); }, admErr);
+  }
+
+  function refresh(){ Promise.resolve(Store.list()).then(function(subs){ cache=subs||[]; renderTable(); renderStats(); showToast('새로고침'); }); }
+
+  function sorted(){
+    return cache.slice().sort(function(a,b){
+      if((b.score||0)!==(a.score||0)) return (b.score||0)-(a.score||0);
+      return (a.submittedAt||0)-(b.submittedAt||0);
+    });
+  }
+  function renderStats(){
+    var n=cache.length, sum=0, perfect=0;
+    cache.forEach(function(s){ sum+=(s.score||0); if((s.score||0)===(s.total||8)) perfect++; });
+    document.getElementById('statCount').textContent=n;
+    document.getElementById('statAvg').textContent = n? (sum/n).toFixed(1) : '0';
+    document.getElementById('statPerfect').textContent=perfect;
+  }
+  function fmtTime(ms){ if(!ms) return ''; var d=new Date(ms), p=function(n){return (n<10?'0':'')+n;}; return p(d.getMonth()+1)+'/'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes()); }
+  function bdHtml(bd){ if(!bd) return ''; return bd.map(function(ok){ return ok?'<span class="o">O</span>':'<span class="x">X</span>'; }).join(''); }
+
+  function renderTable(){
+    var arr=sorted();
+    if(!arr.length){ document.getElementById('admTable').innerHTML='<div class="lb-empty">아직 제출이 없어요.</div>'; return; }
+    var rows='';
+    arr.forEach(function(s, i){
+      rows += '<tr>'
+        + '<td>'+(i+1)+'</td>'
+        + '<td class="a-nick">'+esc(s.nickname||'(이름없음)')+'</td>'
+        + '<td class="a-score">'+(s.score||0)+'/'+(s.total||8)+'</td>'
+        + '<td class="a-bd">'+bdHtml(s.breakdown)+'</td>'
+        + '<td>'+fmtTime(s.submittedAt)+'</td>'
+        + '<td class="admin-row-actions"><button type="button" class="danger-btn" data-id="'+esc(s.id)+'" style="padding:6px 12px; font-size:12px;">삭제</button></td>'
+        + '</tr>';
+    });
+    document.getElementById('admTable').innerHTML =
+      '<div style="overflow-x:auto;"><table class="adm"><thead><tr><th>#</th><th>참가자</th><th>점수</th>'
+      + '<th title="16문항 정오표">정오표</th><th>제출</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+    document.querySelectorAll('#admTable button[data-id]').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        if(confirm('이 제출을 삭제할까요?')) Promise.resolve(Store.remove(btn.dataset.id)).then(function(){ showToast('삭제됨'); });
+      });
+    });
+  }
+
+  function exportCsv(){
+    var arr=sorted();
+    var head=['순위','닉네임','점수','만점'].concat(QFIELDS.map(function(f){return f.label;})).concat(['제출시각']);
+    var lines=[head.join(',')];
+    arr.forEach(function(s,i){
+      var cells=[ (i+1), '"'+String(s.nickname||'').replace(/"/g,'""')+'"', (s.score||0), (s.total||8) ];
+      QFIELDS.forEach(function(f,k){ cells.push((s.breakdown && s.breakdown[k])?'O':'X'); });
+      cells.push('"'+fmtTime(s.submittedAt)+'"');
+      lines.push(cells.join(','));
+    });
+    var blob=new Blob(['﻿'+lines.join('\r\n')], {type:'text/csv;charset=utf-8;'});
+    var url=URL.createObjectURL(blob), a=document.createElement('a');
+    a.href=url; a.download='ebbaxclub1_제출현황.csv'; document.body.appendChild(a); a.click();
+    document.body.removeChild(a); URL.revokeObjectURL(url);
+  }
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,2 @@
+# 로컬 운영 도구 (Firestore 보안 규칙 재배포) — 공개 Pages에 노출 불필요
+_deploy_rules.py

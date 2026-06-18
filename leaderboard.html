@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>리더보드 · EBB AX CLUB #1 첫 출근</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<nav class="top-nav" aria-label="주요 메뉴">
+  <a href="index.html">아레나</a>
+  <a href="leaderboard.html" aria-current="page">리더보드</a>
+</nav>
+
+<div class="wrap">
+  <nav class="crumbs" aria-label="위치">
+    <span>EBB AX CLUB</span><span class="sep">›</span><span aria-current="page">리더보드 · 1회차</span>
+  </nav>
+
+  <header class="hero">
+    <div class="eyebrow"><span class="live-dot" aria-hidden="true"></span>LEADERBOARD · ARENA #1</div>
+    <h1>리더보드 · 첫 출근</h1>
+    <div class="sub">제출한 답안의 점수(8점 만점)로 순위를 매겨요. 동점이면 먼저 제출한 사람이 위로 올라갑니다.</div>
+  </header>
+
+  <section class="section">
+    <div class="lb-status">
+      <span id="statusText">실시간으로 자동 갱신됩니다.</span>
+      <span style="margin-left:auto;"><a class="btn-link ghost" href="index.html" style="padding:8px 16px; font-size:13px;">아레나로</a></span>
+    </div>
+    <div id="lbBody"><div class="lb-empty">불러오는 중…</div></div>
+  </section>
+
+  <div class="foot">EBB AX CLUB · 1회차 「첫 출근」 · 리더보드<br><span id="footBackend"></span></div>
+</div>
+
+<script src="firebase-config.js"></script>
+<script src="assets/club.js"></script>
+<script>
+(function(){
+  var lbBody=document.getElementById('lbBody');
+  var stext=document.getElementById('statusText');
+  var mine=Store.getMine();
+  var myId = mine ? mine.id : null;
+
+  function esc(s){ return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+  function fmtTime(ms){
+    if(!ms) return '';
+    var d=new Date(ms), p=function(n){return (n<10?'0':'')+n;};
+    return p(d.getMonth()+1)+'/'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes());
+  }
+  function medal(rank){ return rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':''; }
+
+  function renderList(subs){
+    if(!subs || !subs.length){
+      lbBody.innerHTML='<div class="lb-empty">아직 제출한 사람이 없어요.<br>아레나에서 첫 제출의 주인공이 되어보세요!</div>';
+      return;
+    }
+    var arr = subs.slice().sort(function(a,b){
+      if((b.score||0)!==(a.score||0)) return (b.score||0)-(a.score||0);
+      return (a.submittedAt||0)-(b.submittedAt||0);
+    });
+    var rows='', rank=0, prevScore=null, prevTime=null, shown=0;
+    arr.forEach(function(s){
+      shown++;
+      // 점수 desc, 동점 시 제출시각 asc로 고유 등수 부여 (먼저 제출한 사람이 위)
+      if(prevScore===null || s.score!==prevScore || s.submittedAt!==prevTime){ rank=shown; }
+      prevScore=s.score; prevTime=s.submittedAt;
+      var isMe = myId && s.id===myId;
+      var rcls = rank<=3 ? ' top'+rank : '';
+      rows += '<tr'+(isMe?' class="me"':'')+'>'
+        + '<td class="c-rank'+rcls+'">'+(medal(rank)?'<span class="medal">'+medal(rank)+'</span>':rank)+'</td>'
+        + '<td class="c-nick">'+esc(s.nickname||'(이름없음)')+(isMe?'<span class="me-tag">나</span>':'')+'</td>'
+        + '<td class="c-score">'+(s.score||0)+'<span class="of"> / '+(s.total||8)+'</span></td>'
+        + '<td class="c-time">'+fmtTime(s.submittedAt)+'</td>'
+        + '</tr>';
+    });
+    lbBody.innerHTML = '<table class="lb"><thead><tr><th class="c-rank">순위</th><th>참가자</th>'
+      + '<th class="c-score">점수</th><th class="c-time">제출</th></tr></thead><tbody>'+rows+'</tbody></table>';
+  }
+
+  function showError(){
+    lbBody.innerHTML='<div class="lb-empty">공유 서버에 연결하지 못했어요.<br>네트워크를 확인하고 새로고침해 주세요.</div>';
+    stext.textContent='연결 실패';
+  }
+  // 실시간 구독 (local: storage 이벤트 / firebase: onSnapshot)
+  Store.subscribe(function(subs){ renderList(subs); }, showError);
+
+  document.getElementById('footBackend').textContent =
+    (Store.mode==='firebase') ? '공유 모드 (Firebase)' : '데모 모드 (이 브라우저에만 저장)';
+})();
+</script>
+</body>
+</html>
