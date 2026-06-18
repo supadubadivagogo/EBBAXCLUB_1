@@ -32,6 +32,11 @@
     <div id="lbBody"><div class="lb-empty">불러오는 중…</div></div>
   </section>
 
+  <section class="section" id="explSection">
+    <h2>해설</h2>
+    <div id="explBody"><div class="expl-locked">문제 풀이가 끝나면 해설이 공개됩니다.</div></div>
+  </section>
+
   <div class="foot">EBB AX CLUB · 1회차 「첫 출근」 · 리더보드<br><span id="footBackend"></span></div>
 </div>
 
@@ -84,8 +89,14 @@
     lbBody.innerHTML='<div class="lb-empty">공유 서버에 연결하지 못했어요.<br>네트워크를 확인하고 새로고침해 주세요.</div>';
     stext.textContent='연결 실패';
   }
+  function renderExplanation(open){
+    document.getElementById('explBody').innerHTML = open
+      ? '<div class="expl-body">' + window.EXPLANATION_HTML + '</div>'
+      : '<div class="expl-locked">문제 풀이가 끝나면 해설이 공개됩니다.</div>';
+  }
+
   // 실시간 구독 (local: storage 이벤트 / firebase: onSnapshot)
-  Store.subscribe(function(subs){ renderList(subs); }, showError);
+  Store.subscribe(function(subs, meta){ renderList(subs); renderExplanation(meta && meta.explanationOpen); }, showError);
 
   document.getElementById('footBackend').textContent =
     (Store.mode==='firebase') ? '공유 모드 (Firebase)' : '데모 모드 (이 브라우저에만 저장)';

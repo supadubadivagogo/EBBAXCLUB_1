@@ -1,2 +1,7 @@
 # 로컬 운영 도구 (Firestore 보안 규칙 재배포) — 공개 Pages에 노출 불필요
 _deploy_rules.py
+
+# 워크플로/분석 부산물 (정답 노출 위험 — 공개 Pages에 올리면 안 됨)
+files/*.json
+files/out.txt
+files/verify.py

@@ -64,6 +64,7 @@ a{color:inherit;}
 
 /* ---- story ---- */
 .story p{line-height:1.85; margin:0 0 16px; color:#E2E8F0; font-size:15px;}
+.story-img{display:block; width:100%; max-width:420px; height:auto; border-radius:12px; border:1px solid var(--border); margin:18px auto 22px;}
 .story .disclaimer{font-size:12px; color:var(--text-subtle); font-style:italic; margin-bottom:20px;}
 .story .scene-time{font-size:16px; font-weight:800; color:var(--accent-yellow); margin:6px 0 18px; letter-spacing:-.01em;}
 .story .muted{color:var(--text-muted);} .story em{color:#A5B4FC; font-style:italic;}
@@ -222,6 +223,23 @@ button.danger-btn:hover{background:rgba(239,68,68,.12);}
 .receipt-sub{font-size:13px; color:var(--text-muted); margin-top:10px; line-height:1.6;}
 .receipt-rows{margin-top:14px;}
 .receipt-row{display:flex; justify-content:space-between; align-items:center; gap:12px; padding:9px 0; border-bottom:1px dashed var(--border); font-size:13.5px;}
+
+/* ---- 해설 (admin 공개 토글 → leaderboard 노출) ---- */
+.expl-locked{text-align:center; padding:34px 20px; color:var(--text-muted); font-size:14px;
+  background:var(--bg-layer); border:1px dashed var(--border); border-radius:12px;}
+.expl-locked::before{content:'🔒'; display:block; font-size:22px; margin-bottom:10px; opacity:.8;}
+.expl-body{line-height:1.85; color:var(--text-main); font-size:14.5px;}
+.expl-body h3{font-size:16px; font-weight:800; color:var(--accent-yellow); margin:22px 0 8px; letter-spacing:-.01em;}
+.expl-body h3:first-child{margin-top:0;}
+.expl-body p{margin:0 0 13px;}
+.expl-body strong{color:var(--accent-yellow);}
+.expl-body ul,.expl-body ol{margin:0 0 13px; padding-left:20px;}
+.expl-body li{margin:5px 0;}
+.expl-body table{border-collapse:separate; border-spacing:0; width:100%; margin:6px 0 16px;
+  background:var(--bg-layer); border:1px solid var(--border); border-radius:10px; overflow:hidden;}
+.expl-body th{background:rgba(76,29,149,.40); color:#DDD6FE; font-size:12.5px; font-weight:700; padding:9px 12px; text-align:left;}
+.expl-body td{padding:8px 12px; border-top:1px solid var(--border); font-size:13.5px;}
+.expl-pending{color:var(--text-muted); text-align:center; padding:20px;}
 .receipt-row:last-child{border-bottom:none;}
 .receipt-row .r-label{color:var(--text-muted);}
 .receipt-row .r-mark{font-weight:800; font-family:'Consolas',monospace; min-width:24px; text-align:center;}

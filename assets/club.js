@@ -79,6 +79,46 @@ window.scoreValues = function(values){
   return { correct:correct, total:window.QFIELDS.length, breakdown:breakdown };
 };
 
+/* 해설 — 운영자가 admin에서 "해설 공개"하면 리더보드 하단에 노출된다.
+ * 정답은 CSV 분석 + round1.py 원본 + ANS 해시 대조로 삼중 검증됨(2026-06-18). */
+window.EXPLANATION_HTML = `
+<h3>정답</h3>
+<p><strong>이달의 사원</strong> — 전월(2월) · 구매확정 기준 · 개인 매출 합산(클라우드 서버 포함)</p>
+<table><thead><tr><th>순위</th><th>사원</th><th>소속</th><th>2월 매출</th></tr></thead><tbody>
+<tr><td>1위</td><td>최성호 (EMP1013)</td><td>경기1팀</td><td>6,581,846원</td></tr>
+<tr><td>2위</td><td>이상현 (EMP1016)</td><td>경기2팀</td><td>4,752,672원</td></tr>
+<tr><td>3위</td><td>오미래 (EMP1024)</td><td>부산2팀</td><td>4,732,854원</td></tr>
+</tbody></table>
+<p><strong>지역별 실적</strong> — 구매확정 기준 · 클라우드 서버 제외</p>
+<table><thead><tr><th>순위</th><th>지역</th><th>2월 매출</th></tr></thead><tbody>
+<tr><td>1위</td><td>서울</td><td>1,667,110원</td></tr>
+<tr><td>2위</td><td>경기</td><td>1,512,596원</td></tr>
+<tr><td>3위</td><td>광주</td><td>1,370,323원</td></tr>
+<tr><td>4위</td><td>대전</td><td>1,234,342원</td></tr>
+<tr><td>5위</td><td>부산</td><td>1,057,277원</td></tr>
+</tbody></table>
+
+<h3>풀이의 핵심 — 데이터부터 다듬기</h3>
+<p>바로 합산하면 틀립니다. 세 가지 전처리가 먼저예요. ① <strong>상품명 통일</strong> — 같은 상품이 영어·한글·붙여쓰기로 제각각(28가지) 적혀 있지만 실제 상품은 6개입니다. ② <strong>금액 정리</strong> — 일부 금액이 "52,726"처럼 따옴표·콤마가 섞여 있어 숫자로 바꿔야 합니다. ③ <strong>빈 값 제외</strong> — 사원번호·상품명·금액 중 하나라도 비면 그 행은 통째로 뺍니다.</p>
+
+<h3>두 가지 공통 기준</h3>
+<ul>
+<li><strong>매출 = '구매확정'</strong> — 매주 보는 위클리는 '개통완료'로 잡지만, 월 마감(먼슬리)은 환불·철회 유예를 둬 그 다음 단계인 '구매확정'으로 집계합니다. <em>(녹취 04:04~04:16)</em></li>
+<li><strong>기간 = 2월</strong> — 보고일은 3/25지만, 밀려 있던 '전월 정리'라 2026년 <strong>2월</strong> 거래만 셉니다. <em>(녹취 01:28~01:55)</em></li>
+</ul>
+
+<h3>놓치기 쉬운 함정 7가지</h3>
+<ol>
+<li>매출을 '개통완료'로 잡음 → 먼슬리는 <strong>구매확정</strong>입니다.</li>
+<li>이달의 사원에서 클라우드 서버를 뺌 → 개인 실적이라 <strong>포함</strong>합니다.</li>
+<li>지역별 실적에 클라우드 서버를 넣음 → 건당 금액이 커 순위가 뒤집힙니다. 반드시 <strong>제외</strong>. <em>(녹취 07:16~07:53)</em></li>
+<li>상품명을 안 합침 → 28가지 표기를 6개 상품으로 통합해야 합니다.</li>
+<li>빈 값 행을 그대로 합산 → 핵심 필드가 누락된 행은 전체 제외.</li>
+<li>기간을 3월로 잡음 → 밀려 있던 <strong>2월</strong> 먼슬리입니다.</li>
+<li>이름으로 집계 → <strong>동명이인</strong>이 한 사람으로 합쳐집니다. '서준혁'은 사번이 다른 두 사람(EMP1029·EMP1033)인데, 이름으로 묶으면 둘의 실적이 합산돼 7,623,278원으로 <strong>가짜 1위</strong>가 되고 진짜 1위(최성호)가 밀려납니다. 집계 키는 반드시 <strong>사원번호(EMP####)</strong>여야 합니다.</li>
+</ol>
+`;
+
 /* =========================================================================
  * Store — 데이터 저장소 어댑터 (모든 메서드 Promise 반환)
  * 백엔드:
@@ -117,6 +157,7 @@ window.Store = (function(){
       mode: 'local',
       getStatus: function(){ return Promise.resolve(readMeta().status || 'draft'); },
       setStatus: function(s){ var m=readMeta(); m.status=s; writeMeta(m); return Promise.resolve(); },
+      setExplanation: function(open){ var m=readMeta(); m.explanationOpen=!!open; writeMeta(m); return Promise.resolve(); },
       list: function(){ return Promise.resolve(readSubs()); },
       add: function(sub){
         var a=readSubs();
@@ -159,6 +200,10 @@ window.Store = (function(){
       setStatus: async function(s){
         var { fs, db } = await ready;
         await fs.setDoc(fs.doc(db, METADOC[0], METADOC[1]), { status:s }, { merge:true });
+      },
+      setExplanation: async function(open){
+        var { fs, db } = await ready;
+        await fs.setDoc(fs.doc(db, METADOC[0], METADOC[1]), { explanationOpen: !!open }, { merge:true });
       },
       list: async function(){
         var { fs, db } = await ready;
